@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Garden of Dancing Flowers</title>
+
+<style>
+    body {
+        font-family: system-ui, sans-serif;
+        background: linear-gradient(#e8ffe8, #f7fff7);
+        text-align: center;
+        padding: 20px;
+    }
+
+    h1 {
+        margin-bottom: 10px;
+    }
+
+    .controls {
+        margin-bottom: 15px;
+    }
+
+    input, button {
+        padding: 8px;
+        font-size: 14px;
+        margin: 4px;
+    }
+
+    .garden {
+        display: grid;
+        gap: 6px;
+        justify-content: center;
+        margin-top: 20px;
+    }
+
+    .cell {
+        width: 60px;
+        height: 60px;
+        background: #c8e6c9;
+        border-radius: 8px;
+        border: 2px solid white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .flower {
+        animation: dance 1.5s infinite ease-in-out;
+    }
+
+    @keyframes dance {
+        0%   { transform: rotate(0deg) scale(1); }
+        25%  { transform: rotate(5deg) scale(1.05); }
+        50%  { transform: rotate(0deg) scale(1); }
+        75%  { transform: rotate(-5deg) scale(1.05); }
+        100% { transform: rotate(0deg) scale(1); }
+    }
+
+    .info {
+        margin-top: 15px;
+        font-weight: bold;
+    }
+</style>
+</head>
+
+<body>
+
+<h1>🌼 Garden of Dancing Flowers 🌼</h1>
+
+<div class="controls">
+    Rows:
+    <input type="number" id="rows" value="2" min="1" max="10">
+    Columns:
+    <input type="number" id="cols" value="4" min="1" max="10">
+    <button onclick="createGarden()">Create Garden</button>
+    <br><br>
+    Water points (r,c;r,c):
+    <input id="wateringInput" placeholder="0,1;1,2">
+    <button onclick="waterFromInput()">Water</button>
+    <button onclick="resetGarden()">Reset</button>
+</div>
+
+<div class="garden" id="garden"></div>
+
+<div class="info" id="info"></div>
+
+<script>
+/* ---------- State ---------- */
+let flowerBed = [];
+let rows = 2;
+let cols = 4;
+
+/* ---------- Persistence ---------- */
+function saveState() {
+    localStorage.setItem("flowerBed", JSON.stringify(flowerBed));
+    localStorage.setItem("rows", rows);
+    localStorage.setItem("cols", cols);
+}
+
+function loadState() {
+    const saved = localStorage.getItem("flowerBed");
+    if (saved) {
+        flowerBed = JSON.parse(saved);
+        rows = parseInt(localStorage.getItem("rows"));
+        cols = parseInt(localStorage.getItem("cols"));
+        document.getElementById("rows").value = rows;
+        document.getElementById("cols").value = cols;
+        renderGarden();
+        updateInfo();
+        return true;
+    }
+    return false;
+}
+
+/* ---------- Logic ---------- */
+function createGarden() {
+    rows = parseInt(document.getElementById("rows").value);
+    cols = parseInt(document.getElementById("cols").value);
+
+    flowerBed = Array.from({ length: rows }, () =>
+        Array.from({ length: cols }, () => Math.random() < 0.4 ? 'F' : ' ')
+    );
+
+    saveState();
+    renderGarden();
+    updateInfo();
+}
+
+function flowerCount() {
+    return flowerBed.flat().filter(c => c === 'F').length;
+}
+
+function waterCell(r, c) {
+    if (flowerBed[r][c] === ' ') {
+        flowerBed[r][c] = 'F';
+        saveState();
+        renderGarden();
+        updateInfo();
+    }
+}
+
+function waterFromInput() {
+    const input = document.getElementById("wateringInput").value;
+    if (!input.trim()) return;
+
+    input.split(";").forEach(pair => {
+        const [r, c] = pair.split(",").map(v => parseInt(v.trim()));
+        if (
+            r >= 0 && r < rows &&
+            c >= 0 && c < cols
+        ) {
+            waterCell(r, c);
+        }
+    });
+}
+
+function resetGarden() {
+    localStorage.clear();
+    createGarden();
+}
+
+/* ---------- UI ---------- */
+function renderGarden() {
+    const garden = document.getElementById("garden");
+    garden.innerHTML = "";
+    garden.style.gridTemplateColumns = `repeat(${cols}, 60px)`;
+
+    flowerBed.forEach((row, r) => {
+        row.forEach((cell, c) => {
+            const div = document.createElement("div");
+            div.className = "cell";
+            div.onclick = () => waterCell(r, c);
+
+            if (cell === 'F') {
+                div.textContent = "🌼";
+                div.classList.add("flower");
+            }
+
+            garden.appendChild(div);
+        });
+    });
+}
+
+function updateInfo() {
+    const count = flowerCount();
+    const info = document.getElementById("info");
+    info.textContent = count
+        ? `🌸 The flowers are dancing! Total flowers: ${count}`
+        : "Add water to make the flowers dance!";
+}
+
+/* ---------- Init ---------- */
+if (!loadState()) {
+    createGarden();
+}
+</script>
+
+</body>
+</html>
